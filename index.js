@@ -6,6 +6,7 @@ const bodyParser = require('koa-bodyparser');
 const app = new Koa();
 app.use(bodyParser());
 const jsesc = require('jsesc');
+const fs = require('fs');
 
 const headersToRemove = [
     "host", "user-agent", "accept", "accept-encoding", "content-length",
@@ -14,6 +15,10 @@ const headersToRemove = [
 const responseHeadersToRemove = ["Accept-Ranges", "Content-Length", "Keep-Alive", "Connection", "content-encoding", "set-cookie"];
 
 (async () => {
+    if (!process.env.PUPPETEER_COOKIEJSON || !process.env.PUPPETEER_USERDATADIR) {
+        console.log("requires PUPPETEER_COOKIEJSON and PUPPETEER_USERDATADIR in env var");
+        process.exit(1);
+    }
     let options = {
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -27,9 +32,24 @@ const responseHeadersToRemove = ["Accept-Ranges", "Content-Length", "Keep-Alive"
     if (process.env.PUPPETEER_PROXY)
         options.args.push(`--proxy-server=${process.env.PUPPETEER_PROXY}`);
     const browser = await puppeteer.launch(options);
+    const page = await browser.newPage();
+    console.log("Loading cookie from " + process.env.PUPPETEER_COOKIEJSON);
+    // Export from https://chrome.google.com/webstore/detail/nmckokihipjgplolmcmjakknndddifde
+    const cookies = JSON.parse(fs.readFileSync(process.env.PUPPETEER_COOKIEJSON, 'utf-8'));
+    for (const cookie of cookies) {
+      await page.setCookie(cookie);
+    }
+	if (process.env.PUPPETEER_INITPAGE) {
+    console.log("Checking page title " + process.env.PUPPETEER_INITPAGE);
+    response = await page.goto(process.env.PUPPETEER_INITPAGE, { timeout: 30000, waitUntil: 'domcontentloaded' });
+    responseBody = await response.text();
+    m = responseBody.match(/<title>(.+)<\/title>/)
+    console.log(m ? m[1] : 'title not found')
+	}
     app.use(async ctx => {
         if (ctx.query.url) {
             const url = ctx.url.replace("/?url=", "");
+            console.log(url);
             let responseBody;
             let responseData;
             let responseHeaders;
