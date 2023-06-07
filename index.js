@@ -58,7 +58,7 @@ const responseHeadersToRemove = ["Accept-Ranges", "Content-Length", "Keep-Alive"
             console.log(url);
             let responseBody;
             let responseData;
-            let responseHeaders;
+            let responseHeaders = [];
             const page = await browser.newPage();
             if (ctx.method == "POST") {
                 await page.removeAllListeners('request');
