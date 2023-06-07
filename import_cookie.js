@@ -1,3 +1,5 @@
+// import and use from a new process seems broken at the moment...
+
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const fs = require('fs');
@@ -27,14 +29,17 @@ puppeteer.use(StealthPlugin());
     const page = await browser.newPage();
     const cookies = JSON.parse(fs.readFileSync(process.env.PUPPETEER_COOKIEJSON, 'utf-8'));
     for (const cookie of cookies) {
-      await page.setCookie(cookie);
+        await page.setCookie(cookie);
     }
-if (process.env.PUPPETEER_INITPAGE) {
-    console.log("Checking page title " + process.env.PUPPETEER_INITPAGE);
-    response = await page.goto(process.env.PUPPETEER_INITPAGE, { timeout: 30000, waitUntil: 'domcontentloaded' });
-    responseBody = await response.text();
-    m = responseBody.match(/<title>(.+)<\/title>/)
-    console.log(m ? m[1] : 'title not found')
-}
+    if (process.env.PUPPETEER_INITPAGE) {
+        console.log("Checking page title " + process.env.PUPPETEER_INITPAGE);
+        response = await page.goto(process.env.PUPPETEER_INITPAGE, {
+            timeout: 30000,
+            waitUntil: 'domcontentloaded'
+        });
+        responseBody = await response.text();
+        m = responseBody.match(/<title>(.+)<\/title>/)
+        console.log(m ? m[1] : 'title not found')
+    }
     process.exit();
 })();

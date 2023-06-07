@@ -33,19 +33,25 @@ const responseHeadersToRemove = ["Accept-Ranges", "Content-Length", "Keep-Alive"
         options.args.push(`--proxy-server=${process.env.PUPPETEER_PROXY}`);
     const browser = await puppeteer.launch(options);
     const page = await browser.newPage();
+
     console.log("Loading cookie from " + process.env.PUPPETEER_COOKIEJSON);
     // Export from https://chrome.google.com/webstore/detail/nmckokihipjgplolmcmjakknndddifde
     const cookies = JSON.parse(fs.readFileSync(process.env.PUPPETEER_COOKIEJSON, 'utf-8'));
     for (const cookie of cookies) {
-      await page.setCookie(cookie);
+        await page.setCookie(cookie);
     }
-	if (process.env.PUPPETEER_INITPAGE) {
-    console.log("Checking page title " + process.env.PUPPETEER_INITPAGE);
-    response = await page.goto(process.env.PUPPETEER_INITPAGE, { timeout: 30000, waitUntil: 'domcontentloaded' });
-    responseBody = await response.text();
-    m = responseBody.match(/<title>(.+)<\/title>/)
-    console.log(m ? m[1] : 'title not found')
-	}
+
+    if (process.env.PUPPETEER_INITPAGE) {
+        console.log("Checking page title " + process.env.PUPPETEER_INITPAGE);
+        response = await page.goto(process.env.PUPPETEER_INITPAGE, {
+            timeout: 30000,
+            waitUntil: 'domcontentloaded'
+        });
+        responseBody = await response.text();
+        m = responseBody.match(/<title>(.+)<\/title>/)
+        console.log(m ? m[1] : 'title not found')
+    }
+
     app.use(async ctx => {
         if (ctx.query.url) {
             const url = ctx.url.replace("/?url=", "");
@@ -75,7 +81,9 @@ const responseHeadersToRemove = ["Accept-Ranges", "Content-Length", "Keep-Alive"
             });
 
             await client.on('Network.requestIntercepted', async e => {
-                let obj = { interceptionId: e.interceptionId };
+                let obj = {
+                    interceptionId: e.interceptionId
+                };
                 if (e.isDownload) {
                     await client.send('Network.getResponseBodyForInterception', {
                         interceptionId: e.interceptionId
@@ -99,11 +107,17 @@ const responseHeadersToRemove = ["Accept-Ranges", "Content-Length", "Keep-Alive"
             try {
                 let response;
                 let tryCount = 0;
-                response = await page.goto(url, { timeout: 30000, waitUntil: 'domcontentloaded' });
+                response = await page.goto(url, {
+                    timeout: 30000,
+                    waitUntil: 'domcontentloaded'
+                });
                 responseBody = await response.text();
                 responseData = await response.buffer();
                 while (responseBody.includes("challenge-running") && tryCount <= 10) {
-                    newResponse = await page.waitForNavigation({ timeout: 30000, waitUntil: 'domcontentloaded' });
+                    newResponse = await page.waitForNavigation({
+                        timeout: 30000,
+                        waitUntil: 'domcontentloaded'
+                    });
                     if (newResponse) response = newResponse;
                     responseBody = await response.text();
                     responseData = await response.buffer();
@@ -113,7 +127,14 @@ const responseHeadersToRemove = ["Accept-Ranges", "Content-Length", "Keep-Alive"
                 const cookies = await page.cookies();
                 if (cookies)
                     cookies.forEach(cookie => {
-                        const { name, value, secure, expires, domain, ...options } = cookie;
+                        const {
+                            name,
+                            value,
+                            secure,
+                            expires,
+                            domain,
+                            ...options
+                        } = cookie;
                         ctx.cookies.set(cookie.name, cookie.value, options);
                     });
             } catch (error) {
@@ -127,8 +148,7 @@ const responseHeadersToRemove = ["Accept-Ranges", "Content-Length", "Keep-Alive"
             responseHeadersToRemove.forEach(header => delete responseHeaders[header]);
             Object.keys(responseHeaders).forEach(header => ctx.set(header, jsesc(responseHeaders[header])));
             ctx.body = responseData;
-        }
-        else {
+        } else {
             ctx.body = "Please specify the URL in the 'url' query string.";
         }
     });
