@@ -54,8 +54,11 @@ const responseHeadersToRemove = ["Accept-Ranges", "Content-Length", "Keep-Alive"
 
     app.use(async ctx => {
         if (ctx.query.url) {
-            const url = ctx.url.replace("/?url=", "");
-            console.log(url);
+            let url = ctx.url.replace("/?url=", "");
+            if (url.search(/^https?%3A/)==0) {
+                url = encodeURIComponent(url)
+            }
+            console.log("GET " + url);
             let responseBody;
             let responseData;
             let responseHeaders = [];
